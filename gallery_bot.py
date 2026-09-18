@@ -82,7 +82,11 @@ async def show_patient_card(
   )
 
   keyboard = [
-      [InlineKeyboardButton("📄 Add Sheet (Photo)", callback_data=f"addphoto_{name}")],
+      [
+          InlineKeyboardButton(
+              "📸 Snap Sheet (Camera)", callback_data=f"addphoto_{name}"
+          )
+      ],
       [InlineKeyboardButton("🏷️ Set Diagnosis", callback_data=f"dxmenu_{name}")],
       [InlineKeyboardButton("✏️ Add Lab / Note", callback_data=f"addlab_{name}")],
       [InlineKeyboardButton("🚪 Discharge Patient", callback_data=f"discharge_{name}")],
@@ -99,17 +103,17 @@ async def show_patient_card(
         text, reply_markup=markup, parse_mode="Markdown"
     )
 
-  # 2. Automatically send all attached sheet photos right below it
+  # 2. Automatically send all attached sheet/lab photos right below it
   for file_id in photos:
     try:
       await context.bot.send_photo(
-          chat_id=chat_id, photo=file_id, caption=f"📄 Sheet for {name}"
+          chat_id=chat_id, photo=file_id, caption=f"📄 Record for {name}"
       )
     except Exception:
       pass
 
 
-# Main text handler (Search or Add Note/Labs)
+# Main text handler (Search or Add Note/Labs via typing)
 async def handle_text_message(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ):
@@ -136,6 +140,7 @@ async def handle_text_message(
         f"✅ **Saved note for {active_patient}:**\n`{user_text}`",
         parse_mode="Markdown",
     )
+    await show_patient_card(update, context, active_patient, records[active_patient])
     return
 
   query_name = user_text.lower()
@@ -185,15 +190,14 @@ async def handle_text_message(
     )
 
 
-# Handler for receiving photos (Sheet / Lab images)
+# Handler for receiving photos (Sheets or Lab photos via both buttons)
 async def handle_photo_message(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ):
-  active_patient = context.user_data.get("adding_photo_for")
+  active_patient = context.user_data.get("adding_photo_for") or context.user_data.get("adding_labs_for")
   if not active_patient:
     await update.message.reply_text(
-        "Please search for a patient first and tap 'Add Sheet (Photo)' before"
-        " sending a photo."
+        "Please search for a patient first and tap 'Snap Sheet (Camera)' or 'Add Lab / Note' before sending a photo."
     )
     return
 
@@ -213,9 +217,10 @@ async def handle_photo_message(
   save_records(records)
 
   context.user_data["adding_photo_for"] = None
+  context.user_data["adding_labs_for"] = None
 
   await update.message.reply_text(
-      f"📸 **Sheet saved successfully for {active_patient}!**",
+      f"📸 **Photo saved successfully for {active_patient}!**",
       parse_mode="Markdown",
   )
   await show_patient_card(update, context, active_patient, records[active_patient])
@@ -275,8 +280,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     patient_name = data.replace("addphoto_", "")
     context.user_data["adding_photo_for"] = patient_name
     await query.message.reply_text(
-        f"📷 **Ready for {patient_name} (Sheet):**\nNow take a photo or upload an"
-        " image of the patient sheet/labs from your gallery.",
+        f"📸 **Camera Ready for {patient_name} (Sheet Photo):**\n"
+        "Tap the **Camera icon** or **Paperclip icon** at the bottom of your screen to snap the physical sheet right now!",
         parse_mode="Markdown",
     )
 
@@ -329,8 +334,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     patient_name = data.replace("addlab_", "")
     context.user_data["adding_labs_for"] = patient_name
     await query.message.reply_text(
-        f"📝 **Ready for {patient_name}:**\nSend the lab results or clinical notes"
-        " now as a text message.",
+        f"📝 **Ready for {patient_name} (Labs / Notes):**\n"
+        "You can either **type your text note/labs** or **send a photo** of the lab report right now!",
         parse_mode="Markdown",
     )
 
@@ -365,7 +370,7 @@ def main():
       MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message)
   )
 
-  print("Bot running with automatic photo viewing, diagnoses, and unit workflow!")
+  print("Bot running with clear camera UI hints, dual lab options, and complete clinical features!")
   app.run_polling()
 
 
