@@ -28,7 +28,7 @@ def save_records(records):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Welcome to the Women's Health Hospital Bot. 🏥\n"
-        "Use /units to view hospital units or send a photo of a patient sheet."
+        "Use /units to view hospital units or type 'recent' to see latest admissions."
     )
 
 async def units_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -38,7 +38,6 @@ async def units_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     keyboard = []
-    # Assuming records can be structured or mapped to units
     keyboard.append([InlineKeyboardButton("Recent Patients", callback_data="recent_patients")])
     
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -46,7 +45,6 @@ async def units_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    # Acknowledge the button click immediately to stop the loading spinner
     await query.answer()
     
     data = query.data
@@ -128,7 +126,6 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
     print("Bot running live...")
-    # This clears any webhook conflicts and stops button lag
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
